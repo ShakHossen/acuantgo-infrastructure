@@ -1,10 +1,10 @@
 
 # These defaults apply to all environments
 
-default DESIGN_VERSION          "v0.0.48-develop"
-default INSTANCE_VERSION        "v0.1.64-develop"
-default PROVISIONING_VERSION    "v0.0.24-develop"
-default WEBSTORE_VERSION        "v3.13-test"
+default DESIGN_VERSION          "v0.0.69-develop"
+default INSTANCE_VERSION        "v0.1.77-develop"
+default PROVISIONING_VERSION    "v0.0.30-develop"
+default WEBSTORE_VERSION        "v-main-3.14.3"
 
 # Import local settings, if present
 [ -f '.env' ] && source '.env'
