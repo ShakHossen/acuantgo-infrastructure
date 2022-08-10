@@ -1,0 +1,78 @@
+# Service definition for 'provisioning' 
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: acuantgo-provisioning
+    deployment: unknown-v0.0-latest
+  name: acuantgo-provisioning
+  namespace: acuant-go
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: acuantgo-provisioning
+      deployment: unknown-v0.0-latest
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        iam.amazonaws.com/role: eks-worker-node-group-dev
+      labels:
+        app: acuantgo-provisioning
+        deployment: unknown-v0.0-latest
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: app-config-unknown-v0.0-latest
+        - secretRef:
+            name: app-secret-unknown-v0.0-latest
+        image: localhost:5001/acuantgo-provisioning-service:v0.0.11
+        imagePullPolicy: Always
+        name: acuantgo-provisioning
+        ports:
+        - containerPort: 5003
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: acuantgo-provisioning-service
+  namespace: acuant-go
+  labels:
+    app: acuantgo-provisioning
+  annotations:
+    alb.ingress.kubernetes.io/backend-protocol: 'TCP'
+    alb.ingress.kubernetes.io/healthcheck-path: '/'
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: '5'
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: '2'
+    alb.ingress.kubernetes.io/healthcheck-port: 'traffic-port'
+    alb.ingress.kubernetes.io/healthcheck-protocol: 'TCP'
+    alb.ingress.kubernetes.io/healthy-threshold-count: '2'
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: '2'
+    alb.ingress.kubernetes.io/success-codes: '200'
+spec:
+  ports:
+    - port: 9090
+      targetPort: 5003
+      protocol: TCP
+  type: NodePort
+  selector:
+    app: acuantgo-provisioning
+    deployment: unknown-v0.0-latest

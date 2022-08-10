@@ -1,0 +1,44 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ${INSTANCE_SERVICE}
+  name: ${INSTANCE_SERVICE}
+  namespace: ${K8S_NAMESPACE}
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: ${INSTANCE_SERVICE}
+      deployment: ${K8S_LABEL_DEPLOYMENT}
+  template:
+    metadata:
+      annotations:
+        iam.amazonaws.com/role: ${EKS_WORKER_NODE_GROUP}-${ENVIRONMENT_NAME}
+      labels:
+        app: ${INSTANCE_SERVICE}
+        deployment: ${K8S_LABEL_DEPLOYMENT}
+    spec:
+      containers:
+      - name: ${INSTANCE_SERVICE}
+        image: ${INSTANCE_IMAGE}
+        imagePullPolicy: Always
+        envFrom:
+        - configMapRef:
+            name: ${CONFIG_MAP_NAME}
+        - secretRef:
+            name: ${SECRET_NAME}
+        ports:
+        - containerPort: ${INSTANCE_PORT}
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30

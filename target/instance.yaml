@@ -1,0 +1,107 @@
+# Service definition for 'instance' 
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: acuantgo-instance
+  name: acuantgo-instance
+  namespace: acuant-go
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: acuantgo-instance
+      deployment: unknown-v0.0-latest
+  template:
+    metadata:
+      annotations:
+        iam.amazonaws.com/role: eks-worker-node-group-dev
+      labels:
+        app: acuantgo-instance
+        deployment: unknown-v0.0-latest
+    spec:
+      containers:
+      - name: acuantgo-instance
+        image: localhost:5001/hub-instance-design-studio-acountgo:v0.1.60
+        imagePullPolicy: Always
+        envFrom:
+        - configMapRef:
+            name: app-config-unknown-v0.0-latest
+        - secretRef:
+            name: app-secret-unknown-v0.0-latest
+        ports:
+        - containerPort: 5005
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: acuantgo-instance-service
+  namespace: acuant-go
+  labels:
+    app: acuantgo-instance
+  annotations:
+    alb.ingress.kubernetes.io/backend-protocol: 'TCP'
+    alb.ingress.kubernetes.io/healthcheck-path: '/'
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: '5'
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: '2'
+    alb.ingress.kubernetes.io/healthcheck-port: 'traffic-port'
+    alb.ingress.kubernetes.io/healthcheck-protocol: 'TCP'
+    alb.ingress.kubernetes.io/healthy-threshold-count: '2'
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: '2'
+    alb.ingress.kubernetes.io/success-codes: '200'
+spec:
+  ports:
+    - port: 9090
+      targetPort: 5005
+      protocol: TCP
+  type: NodePort
+  selector:
+    app: acuantgo-instance
+    deployment: unknown-v0.0-latest
+---
+##
+## Ingress (Production)
+##   common-k8s v1.0.0
+##
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: acuantgo-instance-ingress
+  namespace: acuant-go
+  labels:
+      app: acuantgo-instance
+      ##deployment: unknown-v0.0-latest
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-2017-01
+    alb.ingress.kubernetes.io/certificate-arn: default
+    ## for creating record-set
+    external-dns.alpha.kubernetes.io/hostname: default-host-instance
+spec:
+  rules:
+    - host: default-host-instance
+      http:
+        paths:
+          - path: "/*"
+            pathType: Prefix
+            backend:
+              service:
+                name: acuantgo-instance-service
+                port:
+                  number: 9090

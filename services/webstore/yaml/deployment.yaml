@@ -1,0 +1,49 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ${WEBSTORE_SERVICE}
+    deployment: ${K8S_LABEL_DEPLOYMENT}
+  name: ${WEBSTORE_SERVICE}
+  namespace: ${K8S_NAMESPACE}
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ${WEBSTORE_SERVICE}
+      deployment: ${K8S_LABEL_DEPLOYMENT}
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        iam.amazonaws.com/role: ${EKS_WORKER_NODE_GROUP}-${ENVIRONMENT_NAME}
+      labels:
+        app: ${WEBSTORE_SERVICE}
+        deployment: ${K8S_LABEL_DEPLOYMENT}
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: ${CONFIG_MAP_NAME}
+        - secretRef:
+            name: ${SECRET_NAME}
+        image: ${WEBSTORE_IMAGE}
+        imagePullPolicy: Always
+        name: ${WEBSTORE_SERVICE}
+        ports:
+        - containerPort: ${WEBSTORE_PORT}
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30

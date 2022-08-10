@@ -1,0 +1,36 @@
+---
+##
+## Ingress (Production)
+##   common-k8s v1.0.0
+##
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ${DESIGN_SERVICE}-ingress
+  namespace: ${K8S_NAMESPACE}
+  labels:
+      app: ${DESIGN_SERVICE}
+      ##deployment: ${K8S_LABEL_DEPLOYMENT}
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-2017-01
+    alb.ingress.kubernetes.io/certificate-arn: ${AWS_TLS_CERTIFICATE_ARN_DESIGN}
+    ## for creating record-set
+    external-dns.alpha.kubernetes.io/hostname: ${AWS_ROUTE_53_DESIGN}
+spec:
+  rules:
+    - host: ${AWS_ROUTE_53_DESIGN}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ${DESIGN_SERVICE}-service
+                port:
+                  number: ${SERVICE_PORT}
+

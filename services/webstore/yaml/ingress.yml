@@ -1,0 +1,35 @@
+---
+##
+## Ingress (Production)
+##   common-k8s v1.0.0
+##
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ${WEBSTORE_IMAGE_REPO}-ingress
+  namespace: ${K8S_NAMESPACE}
+  labels:
+      app: ${WEBSTORE_IMAGE_REPO}
+      ##deployment: ${K8S_LABEL_DEPLOYMENT}
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-2017-01
+    alb.ingress.kubernetes.io/certificate-arn: ${AWS_TLS_CERTIFICATE_ARN_WEBSTORE}
+    ## for creating record-set
+    external-dns.alpha.kubernetes.io/hostname: ${AWS_ROUTE_53_WEBSTORE}
+spec:
+  rules:
+    - host: ${AWS_ROUTE_53_WEBSTORE}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ${WEBSTORE_IMAGE_REPO}-service
+                port:
+                  number: ${SERVICE_PORT}

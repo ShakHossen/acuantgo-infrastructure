@@ -1,0 +1,116 @@
+# Service definition for 'design' 
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: acuantgo-design
+    deployment: unknown-v0.0-latest
+  name: acuantgo-design
+  namespace: acuant-go
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: acuantgo-design
+      deployment: unknown-v0.0-latest
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: acuantgo-design
+        deployment: unknown-v0.0-latest
+      annotations:
+        iam.amazonaws.com/role: eks-worker-node-group-dev
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: app-config-unknown-v0.0-latest
+        - secretRef:
+            name: app-secret-unknown-v0.0-latest
+        image: localhost:5001/hub-design-studio-acuantgo:v0.0.9
+        imagePullPolicy: Always
+        name: acuantgo-design
+        ports:
+        - containerPort: 8006
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: acuantgo-design-service
+  namespace: acuant-go
+  labels:
+    app: acuantgo-design
+  annotations:
+    alb.ingress.kubernetes.io/backend-protocol: 'TCP'
+    alb.ingress.kubernetes.io/healthcheck-path: '/'
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: '5'
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: '2'
+    alb.ingress.kubernetes.io/healthcheck-port: 'traffic-port'
+    alb.ingress.kubernetes.io/healthcheck-protocol: 'TCP'
+    alb.ingress.kubernetes.io/healthy-threshold-count: '2'
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: '2'
+    alb.ingress.kubernetes.io/success-codes: '200'
+spec:
+  ports:
+    - port: 9090
+      targetPort: 8006
+      protocol: TCP
+  type: NodePort
+  selector:
+    app: acuantgo-design
+    deployment: unknown-v0.0-latest
+ # sessionAffinity: None
+
+---
+##
+## Ingress (Production)
+##   common-k8s v1.0.0
+##
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: acuantgo-design-ingress
+  namespace: acuant-go
+  labels:
+      app: acuantgo-design
+      ##deployment: unknown-v0.0-latest
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-2017-01
+    alb.ingress.kubernetes.io/certificate-arn: default
+    ## for creating record-set
+    external-dns.alpha.kubernetes.io/hostname: default-host-design
+spec:
+  rules:
+    - host: default-host-design
+      http:
+        paths:
+          - path: "/*"
+            pathType: Prefix
+            backend:
+              service:
+                name: acuantgo-design-service
+                port:
+                  number: 9090
+

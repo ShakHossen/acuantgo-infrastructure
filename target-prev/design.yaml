@@ -1,0 +1,79 @@
+# Service definition for 'design' 
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+  labels:
+    app: acuantgo-design
+  name: acuantgo-design
+  namespace: acuant-go
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: acuantgo-design
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: acuantgo-design
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: app-config-unknown-v0.0-latest
+        - secretRef:
+            name: app-secret-unknown-v0.0-latest
+        image: 858475722663.dkr.ecr.us-east-1.amazonaws.com/hub-design-studio-acuantgo:v0.0.10-qa
+        imagePullPolicy: Always
+        name: acuantgo-design
+        ports:
+        - containerPort: 8006
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      imagePullSecrets:
+      - name: design-registry-creds
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: acuantgo-design-service
+  namespace: acuant-go
+  labels:
+    app: acuantgo-design
+  annotations:
+    alb.ingress.kubernetes.io/backend-protocol: 'TCP'
+    alb.ingress.kubernetes.io/healthcheck-path: '/'
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: '5'
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: '2'
+    alb.ingress.kubernetes.io/healthcheck-port: 'traffic-port'
+    alb.ingress.kubernetes.io/healthcheck-protocol: 'TCP'
+    alb.ingress.kubernetes.io/healthy-threshold-count: '2'
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: '2'
+    alb.ingress.kubernetes.io/success-codes: '200'
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+  type: NodePort
+  selector:
+    app: acuantgo-design
+    deployment: unknown-v0.0-latest
+ # sessionAffinity: None
+
